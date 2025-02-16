@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abdul Salam Thahim Corporation - 3D Dice Tic Tac Toe</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+    }
+    h1 {
+      font-size: 28px;
+      color: #fff;
+      text-shadow: 2px 2px 4px #333;
+      margin-bottom: 5px;
+    }
+    h2 {
+      color: #f0e68c;
+      text-shadow: 1px 1px 3px #000;
+      margin-bottom: 20px;
+    }
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .score {
+      margin: 0 15px;
+      font-size: 20px;
+      color: #fff;
+      text-shadow: 1px 1px 2px #333;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+      perspective: 1000px;
+    }
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #e0e0e0, #ffffff);
+      border-radius: 15px;
+      box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      font-size: 50px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    .trophy {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 100px;
+      color: gold;
+      animation: bounce 1s infinite;
+      cursor: pointer;
+      text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.5);
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -60%) scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Abdul Salam Thahim Corporation</h1>
+  <h2>3D Dice Tic Tac Toe</h2>
+  <div class="scoreboard">
+    <div class="score">🔴 Wins: <span id="redScore">0</span></div>
+    <div class="score">🔵 Wins: <span id="blueScore">0</span></div>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="trophy" id="trophy">🏆</div>
+
+  <audio id="clickSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+  <audio id="winSound" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
+
+  <script>
+    const board = document.getElementById('board');
+    const trophy = document.getElementById('trophy');
+    const clickSound = document.getElementById('clickSound');
+    const winSound = document.getElementById('winSound');
+    const redScoreEl = document.getElementById('redScore');
+    const blueScoreEl = document.getElementById('blueScore');
+
+    let currentPlayer = '🔴';
+    let gameState = Array(9).fill(null);
+    let gameActive = true;
+    let scores = { '🔴': 0, '🔵': 0 };
+
+    const dice = { '🔴': '🔴', '🔵': '🔵' };
+    const winningCombinations = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    function createBoard() {
+      board.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', handleCellClick);
+        board.appendChild(cell);
+      }
+    }
+
+    function handleCellClick(e) {
+      const index = e.target.dataset.index;
+      if (gameState[index] || !gameActive) return;
+      gameState[index] = currentPlayer;
+      e.target.textContent = dice[currentPlayer];
+      clickSound.play();
+      checkResult();
+      if (gameActive) {
+        currentPlayer = currentPlayer === '🔴' ? '🔵' : '🔴';
+        setTimeout(botMove, 500);
+      }
+    }
+
+    function botMove() {
+      let available = gameState.map((val, index) => val === null ? index : null).filter(val => val !== null);
+      if (available.length === 0) return;
+      let randomIndex = available[Math.floor(Math.random() * available.length)];
+      gameState[randomIndex] = '🔵';
+      const cell = document.querySelector(`.cell[data-index='${randomIndex}']`);
+      cell.textContent = dice['🔵'];
+      clickSound.play();
+      checkResult();
+      currentPlayer = '🔴';
+    }
+
+    function checkResult() {
+      for (let combination of winningCombinations) {
+        const [a, b, c] = combination;
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          gameActive = false;
+          winSound.play();
+          scores[gameState[a]]++;
+          updateScoreboard();
+          showTrophy(`${gameState[a]} Wins!`);
+          return;
+        }
+      }
+      if (!gameState.includes(null)) {
+        gameActive = false;
+        winSound.play();
+        showTrophy(`It's a Draw!`);
+      }
+    }
+
+    function updateScoreboard() {
+      redScoreEl.textContent = scores['🔴'];
+      blueScoreEl.textContent = scores['🔵'];
+    }
+
+    function showTrophy(text) {
+      trophy.textContent = `🏆 ${text} 🏆`;
+      trophy.style.display = 'block';
+    }
+
+    trophy.addEventListener('click', restartGame);
+
+    function restartGame() {
+      gameState = Array(9).fill(null);
+      gameActive = true;
+      currentPlayer = '🔴';
+      trophy.style.display = 'none';
+      createBoard();
+    }
+
+    createBoard();
+  </script>
+</body>
+</html>
